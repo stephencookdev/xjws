@@ -1,9 +1,11 @@
 import React from "react";
+import Workspace from "../Workspace";
 
 const App = () => {
   return (
     <div>
-      <h1>React App!!</h1>
+      <h1>XJWS</h1>
+      <Workspace />
     </div>
   );
 };

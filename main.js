@@ -4,6 +4,7 @@ require("electron-reload")(__dirname, {
   ignored: /src|node_modules|[\/\\]\./,
 });
 
+const path = require("path");
 const { app, BrowserWindow } = require("electron");
 
 function createWindow() {
@@ -11,7 +12,9 @@ function createWindow() {
     width: 800,
     height: 600,
     webPreferences: {
-      nodeIntegration: true,
+      preload: path.join(__dirname, "preload.js"),
+      contextIsolation: true,
+      nodeIntegrationInWorker: true,
     },
   });
 

@@ -2,7 +2,7 @@ const path = require("path");
 
 module.exports = {
   entry: "./src/index.jsx",
-  target: "electron-renderer",
+  target: "electron-main",
   module: {
     rules: [
       {
