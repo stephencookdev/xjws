@@ -1,5 +1,5 @@
 import React from "react";
-import Workspace from "../Workspace";
+import Workspace from "./Workspace";
 
 const App = () => {
   return (

@@ -20,6 +20,10 @@ const ScriptBlock = ({ script, updateScript, deleteScript }) => {
             updateScript({ autoFocus: false });
           }
         }}
+        style={{
+          width: "100%",
+          height: "100px",
+        }}
       ></textarea>
       {script.error ? (
         <div style={{ border: "1px dashed red" }}>
