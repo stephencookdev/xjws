@@ -11,24 +11,42 @@ const Workspace = () => {
       let globalOut = {};
       let error = null;
       let errorIndex = null;
+      let dirtyHit = false;
       const results = [];
+      const globalAtPoints = [];
       const addResults = (scriptArray) => {
         const newScriptArray = [...scriptArray];
         newScriptArray.forEach((script, index) => {
+          script.dirty = false;
           if (index === errorIndex) {
             script.error = error;
             script.result = null;
+            script.globalAtPoint = null;
           } else if (errorIndex !== null && index > errorIndex) {
             script.error = false;
             script.result = null;
+            script.globalAtPoint = null;
           } else {
             script.result = results[index];
+            script.globalAtPoint = globalAtPoints[index];
             script.error = false;
           }
         });
         return newScriptArray;
       };
       for (let i = 0; i < scriptArray.length; i++) {
+        dirtyHit =
+          dirtyHit ||
+          scriptArray[i].dirty ||
+          scriptArray[i].result === undefined;
+        if (!dirtyHit) {
+          xout = scriptArray[i].result;
+          globalOut = scriptArray[i].globalAtPoint;
+          results.push(xout);
+          globalAtPoints.push(globalOut);
+          continue;
+        }
+
         const enrichedScriptArray = addResults(scriptArray);
         const initBlockVariables = { $$: globalOut, $xin: xout };
         const blockVariables = coreExtensions.reduce(
@@ -80,6 +98,7 @@ const Workspace = () => {
           xout = resp.xout;
           globalOut = resp.globalOut;
           results.push(xout);
+          globalAtPoints.push(globalOut);
         } catch (err) {
           if (err.originalStack) {
             console.error(err.originalStack);
@@ -94,7 +113,7 @@ const Workspace = () => {
 
       setScriptArray((scriptArray) => addResults(scriptArray));
     })();
-  }, [JSON.stringify(scriptArray)]);
+  }, [JSON.stringify(scriptArray.map((script) => script.dirty))]);
 
   return (
     <>
@@ -108,6 +127,7 @@ const Workspace = () => {
               Object.entries(newScript).forEach(([key, value]) => {
                 newScriptArray[index][key] = value;
               });
+              newScriptArray[index].dirty = true;
               setScriptArray(newScriptArray);
             }}
             deleteScript={() => {
