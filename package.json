@@ -1,0 +1,8 @@
+{
+  "name": "xjws",
+  "version": "1.0.0",
+  "main": "index.js",
+  "repository": "git@github.com:stephencookdev/xjws.git",
+  "author": "Stephen Cook <stephen@stephencookdev.co.uk>",
+  "license": "MIT"
+}
