@@ -14,10 +14,14 @@ const Workspace = () => {
       let dirtyHit = false;
       const results = [];
       const globalAtPoints = [];
-      const addResults = (scriptArray) => {
+      const addResults = (scriptArray, { loadingAt } = {}) => {
         const newScriptArray = [...scriptArray];
         newScriptArray.forEach((script, index) => {
-          script.dirty = false;
+          script.loading = typeof loadingAt === "number" && loadingAt <= index;
+          if (typeof loadingAt !== "number") {
+            script.dirty = false;
+          }
+
           if (index === errorIndex) {
             script.error = error;
             script.result = null;
@@ -35,10 +39,7 @@ const Workspace = () => {
         return newScriptArray;
       };
       for (let i = 0; i < scriptArray.length; i++) {
-        dirtyHit =
-          dirtyHit ||
-          scriptArray[i].dirty ||
-          scriptArray[i].result === undefined;
+        dirtyHit = dirtyHit || scriptArray[i].dirty || !scriptArray[i].content;
         if (!dirtyHit) {
           xout = scriptArray[i].result;
           globalOut = scriptArray[i].globalAtPoint;
@@ -51,7 +52,8 @@ const Workspace = () => {
           continue;
         }
 
-        const enrichedScriptArray = addResults(scriptArray);
+        // const enrichedScriptArray = addResults(scriptArray);
+        const enrichedScriptArray = scriptArray;
         const initBlockVariables = { $$: globalOut, $xin: xout };
 
         const blockVariables = await addBlockVariables({
@@ -80,10 +82,19 @@ const Workspace = () => {
               }
             };
         `;
+        let setLoading;
         try {
+          setLoading = setTimeout(() => {
+            setScriptArray((scriptArray) =>
+              addResults(scriptArray, { loadingAt: i })
+            );
+          }, 100);
+
           const resp = await window.api.runInNewContext(codeToEval, {
             ...blockVariables,
             transformOutput,
+            delay: async (ms) =>
+              await new Promise((resolve) => setTimeout(resolve, ms)),
           })();
           if (resp.error) {
             const error = resp.error;
@@ -104,6 +115,8 @@ const Workspace = () => {
           error = err;
           errorIndex = i;
           break;
+        } finally {
+          clearTimeout(setLoading);
         }
       }
 

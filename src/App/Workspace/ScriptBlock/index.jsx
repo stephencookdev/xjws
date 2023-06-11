@@ -5,9 +5,11 @@ const ScriptBlock = ({ script, updateScript, deleteScript }) => {
     <div
       style={{
         border: `1px solid ${script.error ? "red" : "black"}`,
+        opacity: script.loading ? 0.5 : 1,
       }}
     >
       <div style={{ border: "1px dashed black" }}>$x{script.id}</div>
+      {script.loading ? <div>Loading...</div> : null}
       <textarea
         value={script.content}
         onChange={(event) => {
