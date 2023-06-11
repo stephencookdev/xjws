@@ -1,4 +1,5 @@
 import React from "react";
+import { createRoot } from "react-dom/client";
 import Workspace from "./Workspace";
 
 const App = () => {
@@ -10,4 +11,5 @@ const App = () => {
   );
 };
 
-export default App;
+const root = createRoot(document.getElementById("root"));
+root.render(<App />);

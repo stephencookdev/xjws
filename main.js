@@ -1,7 +1,7 @@
 require("electron-reload")(__dirname, {
   electron: require(`${__dirname}/node_modules/electron`),
   hardResetMethod: "exit",
-  ignored: /src|node_modules|[\/\\]\./,
+  ignored: /src\/App|node_modules|[\/\\]\./,
 });
 
 const path = require("path");

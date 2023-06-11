@@ -1,7 +1,12 @@
-import * as core from "./core";
-import * as mongodb from "./mongodb";
+const core = require("./core");
+const mongodb = require("./mongodb");
 
-export const coreExtensions = [core, mongodb].map((extension) => {
-  extension.addBlockVariables ||= () => {};
-  return extension;
-});
+module.exports.coreExtensions = Object.entries({ core, mongodb }).map(
+  ([extensionName, extension]) => {
+    const wrappedExtension = { ...extension };
+
+    wrappedExtension.__name = extensionName;
+
+    return wrappedExtension;
+  }
+);

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import ScriptBlock from "./ScriptBlock";
-import { coreExtensions } from "../../coreExtensions";
+import { addBlockVariables, transformOutput } from "../extensions";
 
 const Workspace = () => {
   const [scriptArray, setScriptArray] = useState([]);
@@ -42,6 +42,10 @@ const Workspace = () => {
         if (!dirtyHit) {
           xout = scriptArray[i].result;
           globalOut = scriptArray[i].globalAtPoint;
+          error = scriptArray[i].error;
+          if (error) {
+            errorIndex = i;
+          }
           results.push(xout);
           globalAtPoints.push(globalOut);
           continue;
@@ -49,28 +53,20 @@ const Workspace = () => {
 
         const enrichedScriptArray = addResults(scriptArray);
         const initBlockVariables = { $$: globalOut, $xin: xout };
-        const blockVariables = coreExtensions.reduce(
-          (acc, curExtension) => ({
-            ...acc,
-            ...curExtension.addBlockVariables({
-              scriptArray: enrichedScriptArray,
-              blockVariables,
-            }),
-          }),
-          initBlockVariables
-        );
+
+        const blockVariables = await addBlockVariables({
+          scriptArray: enrichedScriptArray,
+          blockVariables: initBlockVariables,
+        });
 
         const codeToEval = `
             async () => {
-              ${Object.entries(blockVariables)
-                .map(
-                  ([key, value]) => `const ${key} = ${JSON.stringify(value)};`
-                )
-                .join("\n")}
               try {
-                const __xout = await (async () => { ${
-                  scriptArray[i].content
-                } })();
+                const __xout = await transformOutput(
+                  await (async () => { ${scriptArray[i].content} })()
+                );
+
+                
 
                 return {
                   xout: __xout,
@@ -86,8 +82,8 @@ const Workspace = () => {
         `;
         try {
           const resp = await window.api.runInNewContext(codeToEval, {
-            __xout: xout,
-            globalOut,
+            ...blockVariables,
+            transformOutput,
           })();
           if (resp.error) {
             const error = resp.error;
