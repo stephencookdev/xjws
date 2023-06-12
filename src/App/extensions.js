@@ -1,9 +1,11 @@
+import { useState, useEffect } from "react";
+
 export const addBlockVariables = async ({
   scriptArray,
   blockVariables: initBlockVariables,
 }) => {
   const extensions = window.api.coreExtensions.filter(
-    (extension) => extension.addBlockVariables
+    (extension) => extension.addBlockVariables && extension.__isInit()
   );
 
   const blockVariables = initBlockVariables;
@@ -20,7 +22,7 @@ export const addBlockVariables = async ({
 
 export const transformOutput = async (initOut) => {
   const extensions = window.api.coreExtensions.filter(
-    (extension) => extension.transformOutput
+    (extension) => extension.transformOutput && extension.__isInit()
   );
 
   let out = initOut;
@@ -29,4 +31,27 @@ export const transformOutput = async (initOut) => {
   }
 
   return out;
+};
+
+export const useExtensionsStatus = () => {
+  const getExtensionsStatus = () =>
+    window.api.coreExtensions.map((extension) => ({
+      name: extension.__name,
+      loaded: extension.__isInit(),
+    }));
+
+  const [extensionsStatus, setExtensionsStatus] = useState(
+    getExtensionsStatus()
+  );
+
+  useEffect(() => {
+    const listener = (event) => {
+      if (event.data.type !== "extension-ready-change") return;
+      setExtensionsStatus(getExtensionsStatus());
+    };
+    window.addEventListener("message", listener);
+    return () => window.removeEventListener("message", listener);
+  }, []);
+
+  return extensionsStatus;
 };

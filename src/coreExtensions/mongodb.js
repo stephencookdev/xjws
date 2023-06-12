@@ -1,6 +1,6 @@
 const os = require("os");
 const path = require("path");
-const { MongoClient, AbstractCursor } = require("mongodb");
+const { MongoClient } = require("mongodb");
 const debounce = require("lodash.debounce");
 
 function getEnvConfig() {
@@ -13,43 +13,55 @@ function getEnvConfig() {
   return environments;
 }
 
-const debouncedGetEnvConfig = debounce(getEnvConfig, 10_000, {
+const debouncedGetEnvConfig = debounce(getEnvConfig, 15_000, {
   leading: true,
 });
 
 const openConnections = {};
 async function getEnvClients() {
-  const environments = await debouncedGetEnvConfig();
-  const envClients = Object.fromEntries(
-    await Promise.all(
-      Object.entries(environments).map(async ([envName, env]) => {
-        if (openConnections[envName]) {
-          if (!openConnections[envName].cleanup()) {
+  const failTimeout = () =>
+    new Promise((_, reject) => {
+      setTimeout(() => {
+        reject(new Error("Failed to connect to MongoDB"));
+      }, 5_000);
+    });
+
+  const main = async () => {
+    const environments = await debouncedGetEnvConfig();
+    const envClients = Object.fromEntries(
+      await Promise.all(
+        Object.entries(environments).map(async ([envName, env]) => {
+          if (openConnections[envName] && !openConnections[envName].cleanup()) {
+            await openConnections[envName].client.db().admin().ping();
             return [envName, openConnections[envName].client];
           }
-        }
 
-        const client = new MongoClient(env.url);
-        openConnections[envName] = {
-          client,
-          isClosed: () => client.topology.s.state === "closed",
-          cleanup: () => {
-            if (openConnections[envName].isClosed()) {
-              delete openConnections[envName];
-              return true;
-            }
-            return false;
-          },
-        };
-        await client.connect();
-        return [envName, client];
-      })
-    )
-  );
-  return envClients;
+          const client = new MongoClient(env.url);
+          openConnections[envName] = {
+            client,
+            isClosed: () =>
+              ["closed", "connecting"].includes(client.topology.s.state),
+            cleanup: () => {
+              if (openConnections[envName].isClosed()) {
+                openConnections[envName].client.close();
+                delete openConnections[envName];
+                return true;
+              }
+              return false;
+            },
+          };
+          await client.connect();
+          return [envName, client];
+        })
+      )
+    );
+    return envClients;
+  };
+
+  return await Promise.race([main(), failTimeout()]);
 }
 
-const debouncedGetEnvClients = debounce(getEnvClients, 10_000, {
+const debouncedGetEnvClients = debounce(getEnvClients, 5_000, {
   leading: true,
 });
 
@@ -79,7 +91,7 @@ async function getEnvDbCollections() {
   return envToDbToCollections;
 }
 
-const debouncedGetEnvDbCollections = debounce(getEnvDbCollections, 10_000, {
+const debouncedGetEnvDbCollections = debounce(getEnvDbCollections, 20_000, {
   leading: true,
 });
 
@@ -113,7 +125,7 @@ module.exports.addBlockVariables = async () => {
   }
 
   return {
-    $mongo: populatedEnvs,
+    $mongodb: populatedEnvs,
   };
 };
 
@@ -125,3 +137,22 @@ module.exports.addBlockAutoCompleteSuggestions = async () => {
 
   return [];
 };
+
+module.exports.__init = false;
+(async () => {
+  const checkForInit = async () => {
+    const prevInit = module.exports.__init;
+    try {
+      await debouncedGetEnvClients();
+      module.exports.__init = true;
+    } catch {
+      module.exports.__init = false;
+    } finally {
+      if (prevInit !== module.exports.__init) {
+        window.postMessage({ type: "extension-ready-change" });
+      }
+      setTimeout(checkForInit, 1_000);
+    }
+  };
+  checkForInit();
+})();
