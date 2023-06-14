@@ -1,13 +1,7 @@
-const core = require("./core");
-const mongodb = require("./mongodb");
+const { wrapExtension } = require("./utils");
+const core = require("./extensions/core");
+const mongodb = require("./extensions/mongodb");
 
 module.exports.coreExtensions = Object.entries({ core, mongodb }).map(
-  ([extensionName, extension]) => {
-    const wrappedExtension = { ...extension };
-
-    wrappedExtension.__isInit = () => extension.__init !== false;
-    wrappedExtension.__name = extensionName;
-
-    return wrappedExtension;
-  }
+  ([extensionName, extension]) => wrapExtension(extensionName, extension)
 );

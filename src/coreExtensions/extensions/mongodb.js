@@ -95,64 +95,67 @@ const debouncedGetEnvDbCollections = debounce(getEnvDbCollections, 20_000, {
   leading: true,
 });
 
-module.exports.addBlockVariables = async () => {
-  const envClients = await debouncedGetEnvClients();
-  const envDbCollections = await debouncedGetEnvDbCollections();
+module.exports = (utils) => {
+  const addBlockVariables = async () => {
+    const envClients = await debouncedGetEnvClients();
+    const envDbCollections = await debouncedGetEnvDbCollections();
 
-  const accessCollection = async (envName, dbName, collectionName) => {
-    const client = envClients[envName];
-    const db = client.db(dbName);
-    const collection = db.collection(collectionName);
+    const accessCollection = async (envName, dbName, collectionName) => {
+      const client = envClients[envName];
+      const db = client.db(dbName);
+      const collection = db.collection(collectionName);
 
-    return () => collection;
+      return () => collection;
+    };
+
+    const populatedEnvs = {};
+    for (const [envName, dbToCollections] of Object.entries(envDbCollections)) {
+      const populatedDbToCollections = {};
+      for (const [dbName, collections] of Object.entries(dbToCollections)) {
+        const populatedCollections = {};
+        for (const collectionName of collections) {
+          populatedCollections[collectionName] = await accessCollection(
+            envName,
+            dbName,
+            collectionName
+          );
+        }
+        populatedDbToCollections[dbName] = populatedCollections;
+      }
+      populatedEnvs[envName] = populatedDbToCollections;
+    }
+
+    return {
+      $mongodb: populatedEnvs,
+    };
   };
 
-  const populatedEnvs = {};
-  for (const [envName, dbToCollections] of Object.entries(envDbCollections)) {
-    const populatedDbToCollections = {};
-    for (const [dbName, collections] of Object.entries(dbToCollections)) {
-      const populatedCollections = {};
-      for (const collectionName of collections) {
-        populatedCollections[collectionName] = await accessCollection(
-          envName,
-          dbName,
-          collectionName
-        );
+  const addBlockAutoCompleteSuggestions = async () => {
+    const envClients = await debouncedGetEnvClients();
+    const envDbCollections = await debouncedGetEnvDbCollections();
+
+    // TODO implement me once we have a proper editor, that takes suggestions
+
+    return [];
+  };
+
+  (async () => {
+    const checkForInit = async () => {
+      try {
+        await debouncedGetEnvClients();
+        utils.setInitState(true);
+      } catch {
+        utils.setInitState(false);
+      } finally {
+        setTimeout(checkForInit, 1_000);
       }
-      populatedDbToCollections[dbName] = populatedCollections;
-    }
-    populatedEnvs[envName] = populatedDbToCollections;
-  }
+    };
+    checkForInit();
+  })();
 
   return {
-    $mongodb: populatedEnvs,
+    __init: false,
+    addBlockVariables,
+    addBlockAutoCompleteSuggestions,
   };
 };
-
-module.exports.addBlockAutoCompleteSuggestions = async () => {
-  const envClients = await debouncedGetEnvClients();
-  const envDbCollections = await debouncedGetEnvDbCollections();
-
-  // TODO implement me once we have a proper editor, that takes suggestions
-
-  return [];
-};
-
-module.exports.__init = false;
-(async () => {
-  const checkForInit = async () => {
-    const prevInit = module.exports.__init;
-    try {
-      await debouncedGetEnvClients();
-      module.exports.__init = true;
-    } catch {
-      module.exports.__init = false;
-    } finally {
-      if (prevInit !== module.exports.__init) {
-        window.postMessage({ type: "extension-ready-change" });
-      }
-      setTimeout(checkForInit, 1_000);
-    }
-  };
-  checkForInit();
-})();
