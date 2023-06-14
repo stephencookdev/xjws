@@ -20,17 +20,21 @@ export const addBlockVariables = async ({
   return blockVariables;
 };
 
-export const transformOutput = async (initOut) => {
+export const transformOutputStr = () => {
   const extensions = window.api.coreExtensions.filter(
-    (extension) => extension.transformOutput && extension.__isInit()
+    (extension) => extension.transformOutputStr && extension.__isInit()
+  );
+  const functionsToCall = extensions.map((extension) =>
+    extension.transformOutputStr()
   );
 
-  let out = initOut;
-  for (const curExtension of extensions) {
-    out = await curExtension.transformOutput(out);
-  }
+  return `async (initOut) => {
 
-  return out;
+    let out = initOut;
+    ${functionsToCall.map((fn) => `out = (${fn})(out)`).join("\n")}
+
+    return out;
+  }`;
 };
 
 export const useExtensionsStatus = () => {

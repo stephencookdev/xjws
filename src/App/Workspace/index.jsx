@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import ScriptBlock from "./ScriptBlock";
-import { addBlockVariables, transformOutput } from "../extensions";
+import { addBlockVariables, transformOutputStr } from "../extensions";
 
 const Workspace = () => {
   const [scriptArray, setScriptArray] = useState([]);
@@ -64,11 +64,9 @@ const Workspace = () => {
         const codeToEval = `
             async () => {
               try {
-                const __xout = await transformOutput(
+                const __xout = await (${transformOutputStr()})(
                   await (async () => { ${scriptArray[i].content} })()
                 );
-
-                
 
                 return {
                   xout: __xout,
@@ -92,7 +90,6 @@ const Workspace = () => {
 
           const resp = await window.api.runInNewContext(codeToEval, {
             ...blockVariables,
-            transformOutput,
             delay: async (ms) =>
               await new Promise((resolve) => setTimeout(resolve, ms)),
           })();

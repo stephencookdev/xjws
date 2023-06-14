@@ -139,6 +139,31 @@ module.exports = (utils) => {
     return [];
   };
 
+  const transformOutputStr = () =>
+    (async (initOut) => {
+      const classNames = [];
+      let currentObj = initOut;
+
+      while (currentObj) {
+        const constructorName = currentObj.constructor.name;
+        if (constructorName) {
+          classNames.push(constructorName);
+        }
+        currentObj = Object.getPrototypeOf(currentObj);
+      }
+
+      const isAbstractCursor = classNames.includes("AbstractCursor");
+      if (isAbstractCursor) {
+        const arrayToReturn = [];
+        while (arrayToReturn.length < 20 && (await initOut.hasNext())) {
+          arrayToReturn.push(await initOut.next());
+        }
+        return arrayToReturn;
+      }
+
+      return initOut;
+    }).toString();
+
   (async () => {
     const checkForInit = async () => {
       try {
@@ -157,5 +182,6 @@ module.exports = (utils) => {
     __init: false,
     addBlockVariables,
     addBlockAutoCompleteSuggestions,
+    transformOutputStr,
   };
 };
