@@ -16,7 +16,7 @@ const ScriptBlock = ({ script, updateScript, deleteScript }) => {
           updateScript({ content: event.target.value });
         }}
         ref={(node) => {
-          if (script.autoFocus) {
+          if (script.autoFocus && node) {
             node.focus();
             node.setSelectionRange(node.value.length, node.value.length);
             updateScript({ autoFocus: false });
