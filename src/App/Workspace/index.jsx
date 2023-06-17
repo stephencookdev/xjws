@@ -4,7 +4,7 @@ import { useScriptBlocks } from "../scriptBlocks";
 
 const Workspace = () => {
   const { scriptBlocks, updateBlock, deleteBlock, addBlock } =
-    useScriptBlocks();
+    useScriptBlocks("test-tab-id");
 
   return (
     <>

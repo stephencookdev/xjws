@@ -1,8 +1,9 @@
-import { useState, useEffect } from "react";
+import { useEffect } from "react";
 import { addBlockVariables, transformOutputStr } from "./extensions";
+import { usePersistState } from "./state";
 
-export const useScriptBlocks = () => {
-  const [scriptBlocks, setScriptBlocks] = useState([]);
+export const useScriptBlocks = (tabId) => {
+  const [scriptBlocks, setScriptBlocks] = usePersistState(tabId, []);
 
   const addBlock = (scriptBlock) => {
     setScriptBlocks([...scriptBlocks, scriptBlock]);

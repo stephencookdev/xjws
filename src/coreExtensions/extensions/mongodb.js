@@ -1,10 +1,10 @@
-const os = require("os");
 const path = require("path");
 const { MongoClient } = require("mongodb");
 const debounce = require("lodash.debounce");
+const { xjwsPath } = require("../../common");
 
 function getEnvConfig() {
-  const envJsonPath = path.join(os.homedir(), "/.xjws/envs.json");
+  const envJsonPath = path.join(xjwsPath, "envs.json");
   const environments = Object.fromEntries(
     Object.entries(require(envJsonPath)).filter(
       ([envName]) => !/^__/.test(envName)
