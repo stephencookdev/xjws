@@ -2,9 +2,9 @@ import React from "react";
 import ScriptBlock from "./ScriptBlock";
 import { useScriptBlocks } from "../scriptBlocks";
 
-const Workspace = () => {
+const Workspace = ({ tabName }) => {
   const { scriptBlocks, updateBlock, deleteBlock, addBlock } =
-    useScriptBlocks("test-tab-id");
+    useScriptBlocks(tabName);
 
   return (
     <>

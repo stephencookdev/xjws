@@ -14,6 +14,7 @@ module.exports.Store = class Store {
     this._storeKeyHashes = {};
     this._storeKeyTimeouts = {};
     this._dirtyStoreKeys = new Set();
+    this._toDeleteStoreKeys = new Set();
   }
 
   async init() {
@@ -48,9 +49,19 @@ module.exports.Store = class Store {
     return this._store[key];
   }
 
+  getAllKeys() {
+    return Object.keys(this._store);
+  }
+
   set(key, value) {
     this._store[key] = value;
     this._preScheduleSave(key, value);
+  }
+
+  delete(key) {
+    delete this._store[key];
+    this._toDeleteStoreKeys.add(key);
+    this._scheduleSave();
   }
 
   _preScheduleSave(key, value) {
@@ -101,5 +112,17 @@ module.exports.Store = class Store {
       .map((fn) => storeLimit(fn));
 
     await Promise.all(fileSaveInput);
+
+    const toDeleteStoreKeys = [...this._toDeleteStoreKeys];
+    this._toDeleteStoreKeys.clear();
+
+    const fileDeleteInput = toDeleteStoreKeys
+      .map((key) => async () => {
+        const keyStorePath = path.join(storePath, `${key}.json`);
+        await fs.unlink(keyStorePath);
+      })
+      .map((fn) => storeLimit(fn));
+
+    await Promise.all(fileDeleteInput);
   }
 };
