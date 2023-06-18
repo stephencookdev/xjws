@@ -1,4 +1,5 @@
 import React from "react";
+import MonacoEditor from "react-monaco-editor";
 
 const ScriptBlock = ({ script, updateScript, deleteScript }) => {
   return (
@@ -10,23 +11,23 @@ const ScriptBlock = ({ script, updateScript, deleteScript }) => {
     >
       <div style={{ border: "1px dashed black" }}>$x{script.id}</div>
       {script.loading ? <div>Loading...</div> : null}
-      <textarea
+      <MonacoEditor
+        language="javascript"
+        theme="vs-dark"
+        height={200}
+        width="50%"
         value={script.content}
-        onChange={(event) => {
-          updateScript({ content: event.target.value });
+        onChange={(content) => {
+          updateScript({ content });
         }}
-        ref={(node) => {
+        editorDidMount={(node) => {
           if (script.autoFocus && node) {
             node.focus();
             node.setSelectionRange(node.value.length, node.value.length);
             updateScript({ autoFocus: false });
           }
         }}
-        style={{
-          width: "100%",
-          height: "100px",
-        }}
-      ></textarea>
+      />
       {script.error ? (
         <div style={{ border: "1px dashed red" }}>
           {script.error.toString()}
