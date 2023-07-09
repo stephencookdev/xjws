@@ -27,7 +27,7 @@ const App = () => {
         </ul>
       </div>
       <div>
-        <h2>Workspace</h2>
+        <h2>Workspace {activeTabName}</h2>
         {tabs.map((tab) => (
           <div key={tab.name}>
             <button onClick={() => setActiveTabName(tab.name)}>

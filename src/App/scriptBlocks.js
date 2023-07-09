@@ -6,18 +6,18 @@ export const useScriptBlocks = (tabId) => {
   const [scriptBlocks, setScriptBlocks] = usePersistState(tabId, []);
 
   const addBlock = (scriptBlock) => {
-    setScriptBlocks([...scriptBlocks, scriptBlock]);
+    setScriptBlocks((curScriptBlocks) => [...curScriptBlocks, scriptBlock]);
   };
 
-  const removeBlock = (id) => {
-    setScriptBlocks(
-      scriptBlocks.filter((scriptBlock) => scriptBlock.id !== id)
+  const deleteBlock = (id) => {
+    setScriptBlocks((curScriptBlocks) =>
+      curScriptBlocks.filter((scriptBlock) => scriptBlock.id !== id)
     );
   };
 
   const updateBlock = (id, newScriptBlock) => {
-    setScriptBlocks(
-      scriptBlocks.map((curBlock) =>
+    setScriptBlocks((curScriptBlocks) =>
+      curScriptBlocks.map((curBlock) =>
         curBlock.id === id
           ? {
               ...(curBlock || {}),
@@ -107,8 +107,8 @@ export const useScriptBlocks = (tabId) => {
         let setLoading;
         try {
           setLoading = setTimeout(() => {
-            setScriptBlocks((scriptBlocks) =>
-              addResults(scriptBlocks, { loadingAt: i })
+            setScriptBlocks((curScriptBlocks) =>
+              addResults(curScriptBlocks, { loadingAt: i })
             );
           }, 100);
 
@@ -141,14 +141,14 @@ export const useScriptBlocks = (tabId) => {
         }
       }
 
-      setScriptBlocks((scriptBlocks) => addResults(scriptBlocks));
+      setScriptBlocks((curScriptBlocks) => addResults(curScriptBlocks));
     })();
   }, [JSON.stringify(scriptBlocks.map((script) => script.dirty))]);
 
   return {
     scriptBlocks,
     addBlock,
-    removeBlock,
+    deleteBlock,
     updateBlock,
   };
 };

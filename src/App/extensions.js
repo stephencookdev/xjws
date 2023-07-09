@@ -59,3 +59,28 @@ export const useExtensionsStatus = () => {
 
   return extensionsStatus;
 };
+
+export const useBlockAutoCompleteSuggestions = () => {
+  // refresh on extension changes
+  const status = useExtensionsStatus();
+  const [suggestions, setSuggestions] = useState([]);
+
+  useEffect(() => {
+    (async () => {
+      const extensions = window.api.coreExtensions.filter(
+        (extension) =>
+          extension.addBlockAutoCompleteSuggestions && extension.__isInit()
+      );
+      const newSuggestions = [];
+      for (const curExtension of extensions) {
+        newSuggestions.push(
+          ...(await curExtension.addBlockAutoCompleteSuggestions())
+        );
+      }
+
+      setSuggestions(newSuggestions);
+    })();
+  }, [JSON.stringify(status)]);
+
+  return suggestions;
+};

@@ -1,18 +1,21 @@
 import React from "react";
 import ScriptBlock from "./ScriptBlock";
 import { useScriptBlocks } from "../scriptBlocks";
+import { useBlockAutoCompleteSuggestions } from "../extensions";
 
 const Workspace = ({ tabName }) => {
   const { scriptBlocks, updateBlock, deleteBlock, addBlock } =
     useScriptBlocks(tabName);
+  const blockAutoCompleteSuggestions = useBlockAutoCompleteSuggestions();
 
   return (
     <>
-      {scriptBlocks.map((script, index) => {
+      {scriptBlocks.map((script) => {
         return (
           <ScriptBlock
-            key={index}
+            key={script.id}
             script={script}
+            scriptAutoCompleteSuggestions={blockAutoCompleteSuggestions}
             updateScript={(newScript) => updateBlock(script.id, newScript)}
             deleteScript={() => deleteBlock(script.id)}
           />

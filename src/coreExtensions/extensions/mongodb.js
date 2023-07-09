@@ -100,12 +100,26 @@ module.exports = (utils) => {
     const envClients = await debouncedGetEnvClients();
     const envDbCollections = await debouncedGetEnvDbCollections();
 
-    const accessCollection = async (envName, dbName, collectionName) => {
+    const accessCollection = (envName, dbName, collectionName) => {
       const client = envClients[envName];
       const db = client.db(dbName);
       const collection = db.collection(collectionName);
 
-      return () => collection;
+      const safeCollection = Object.getOwnPropertyNames(
+        Object.getPrototypeOf(collection)
+      )
+        .filter(
+          (key) => typeof collection[key] === "function" && !/^_/.test(key)
+        )
+        .reduce(
+          (acc, key) => ({
+            ...acc,
+            [key]: (...args) => collection[key](...args),
+          }),
+          {}
+        );
+
+      return safeCollection;
     };
 
     const populatedEnvs = {};
@@ -114,7 +128,7 @@ module.exports = (utils) => {
       for (const [dbName, collections] of Object.entries(dbToCollections)) {
         const populatedCollections = {};
         for (const collectionName of collections) {
-          populatedCollections[collectionName] = await accessCollection(
+          populatedCollections[collectionName] = accessCollection(
             envName,
             dbName,
             collectionName
@@ -131,12 +145,66 @@ module.exports = (utils) => {
   };
 
   const addBlockAutoCompleteSuggestions = async () => {
-    const envClients = await debouncedGetEnvClients();
-    const envDbCollections = await debouncedGetEnvDbCollections();
+    const blockVariables = (await addBlockVariables()).$mongodb;
 
-    // TODO implement me once we have a proper editor, that takes suggestions
+    const suggestions = [
+      {
+        label: "$mongodb",
+        insertText: "$mongodb.",
+        kind: "Variable",
+        detail: "Access the MongoDB client",
+      },
+    ];
 
-    return [];
+    Object.entries(blockVariables).forEach(([envName, dbToCollections]) => {
+      suggestions.push({
+        label: `$mongodb.${envName}`,
+        insertText: envName,
+        kind: "Variable",
+        detail: `The ${envName} env of the MongoDB client`,
+      });
+
+      Object.entries(dbToCollections).forEach(([dbName, collections]) => {
+        if (/^_/.test(dbName)) return;
+
+        suggestions.push({
+          label: `$mongodb.${envName}.${dbName}`,
+          insertText: dbName,
+          kind: "Variable",
+          detail: `The ${dbName} db in ${envName}`,
+        });
+
+        Object.entries(collections).forEach(([collectionName, collection]) => {
+          if (/^_/.test(collectionName)) return;
+
+          const collectionMethods = Object.getOwnPropertyNames(
+            Object.getPrototypeOf(collection)
+          )
+            .filter((prop) => typeof collection[prop] === "function")
+            .filter((prop) => !/^_/.test(prop));
+
+          suggestions.push(
+            {
+              label: `$mongodb.${envName}.${dbName}.${collectionName}`,
+              insertText: collectionName,
+              kind: "Variable",
+              detail: `The ${collectionName} collection in ${envName}`,
+            },
+            ...collectionMethods.map((method) => ({
+              label: `$mongodb.${envName}.${dbName}.${collectionName}.${method}`,
+              insertText: `${method}${
+                // if the method takes arguments, add `(`, otherwise add `()`
+                collection[method].length ? "(" : "()"
+              }`,
+              kind: "Function",
+              detail: `https://www.mongodb.com/docs/manual/reference/method/db.collection.${method}/`,
+            }))
+          );
+        });
+      });
+    });
+
+    return suggestions;
   };
 
   const transformOutputStr = () =>

@@ -1,7 +1,43 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import MonacoEditor from "react-monaco-editor";
 
-const ScriptBlock = ({ script, updateScript, deleteScript }) => {
+let _globalDisposable = null;
+
+const ScriptBlock = ({
+  script,
+  scriptAutoCompleteSuggestions,
+  updateScript,
+  deleteScript,
+}) => {
+  const [monaco, setMonaco] = useState(null);
+
+  useEffect(() => {
+    if (!monaco || _globalDisposable) return;
+
+    _globalDisposable = monaco.languages.registerCompletionItemProvider(
+      "javascript",
+      {
+        provideCompletionItems: () => {
+          const suggestions = (scriptAutoCompleteSuggestions || []).map(
+            (suggestion) => ({
+              ...suggestion,
+              kind: suggestion.kind
+                ? monaco.languages.CompletionItemKind[suggestion.kind]
+                : undefined,
+            })
+          );
+
+          return { suggestions };
+        },
+      }
+    );
+
+    return () => {
+      _globalDisposable.dispose();
+      _globalDisposable = null;
+    };
+  }, [monaco, JSON.stringify(scriptAutoCompleteSuggestions)]);
+
   return (
     <div
       style={{
@@ -20,10 +56,21 @@ const ScriptBlock = ({ script, updateScript, deleteScript }) => {
         onChange={(content) => {
           updateScript({ content });
         }}
-        editorDidMount={(node) => {
+        editorDidMount={(node, newMonaco) => {
+          if (newMonaco && newMonaco !== monaco) {
+            setMonaco(newMonaco);
+          }
           if (script.autoFocus && node) {
             node.focus();
-            node.setSelectionRange(node.value.length, node.value.length);
+            const model = node.getModel();
+            const lineCount = model.getLineCount();
+            const lastLineLength = model.getLineLength(lineCount);
+
+            node.setPosition({
+              lineNumber: lineCount,
+              column: lastLineLength + 1,
+            });
+
             updateScript({ autoFocus: false });
           }
         }}
