@@ -30,6 +30,7 @@ const App = () => {
         <h2>Workspace {activeTabName}</h2>
         {tabs.map((tab) => (
           <div key={tab.name}>
+            {tab.name === activeTabName ? ">> " : null}
             <button onClick={() => setActiveTabName(tab.name)}>
               {tab.name}
             </button>

@@ -1,8 +1,9 @@
-import { useEffect } from "react";
+import { useState, useEffect } from "react";
 import { addBlockVariables, transformOutputStr } from "./extensions";
 import { usePersistState } from "./state";
 
 export const useScriptBlocks = (tabId) => {
+  const [shouldRun, setShouldRun] = useState(false);
   const [scriptBlocks, setScriptBlocks] = usePersistState(tabId, []);
 
   const addBlock = (scriptBlock) => {
@@ -16,20 +17,29 @@ export const useScriptBlocks = (tabId) => {
   };
 
   const updateBlock = (id, newScriptBlock) => {
-    setScriptBlocks((curScriptBlocks) =>
-      curScriptBlocks.map((curBlock) =>
-        curBlock.id === id
-          ? {
-              ...(curBlock || {}),
-              ...newScriptBlock,
-              dirty: true,
-            }
-          : curBlock
-      )
-    );
+    setScriptBlocks((curScriptBlocks) => {
+      let isDirty = false;
+      return curScriptBlocks.map((curBlock) => {
+        if (curBlock.id === id) {
+          isDirty = true;
+          return {
+            ...curBlock,
+            ...newScriptBlock,
+            dirty: isDirty,
+          };
+        }
+
+        return {
+          ...curBlock,
+          dirty: isDirty || curBlock.dirty,
+        };
+      });
+    });
   };
 
   useEffect(() => {
+    if (!shouldRun) return;
+
     (async () => {
       let xout = null;
       let globalOut = {};
@@ -104,14 +114,10 @@ export const useScriptBlocks = (tabId) => {
               }
             };
         `;
-        let setLoading;
         try {
-          setLoading = setTimeout(() => {
-            setScriptBlocks((curScriptBlocks) =>
-              addResults(curScriptBlocks, { loadingAt: i })
-            );
-          }, 100);
-
+          setScriptBlocks((curScriptBlocks) =>
+            addResults(curScriptBlocks, { loadingAt: i })
+          );
           const resp = await window.api.runInNewContext(codeToEval, {
             ...blockVariables,
             delay: async (ms) =>
@@ -137,18 +143,40 @@ export const useScriptBlocks = (tabId) => {
           errorIndex = i;
           break;
         } finally {
-          clearTimeout(setLoading);
+          setShouldRun(false);
         }
       }
 
       setScriptBlocks((curScriptBlocks) => addResults(curScriptBlocks));
     })();
-  }, [JSON.stringify(scriptBlocks.map((script) => script.dirty))]);
+  }, [shouldRun, JSON.stringify(scriptBlocks.map((script) => script.dirty))]);
+
+  const requestRun = () => {
+    setScriptBlocks((curScriptBlocks) => {
+      if (!curScriptBlocks.some((script) => script.dirty)) {
+        return curScriptBlocks;
+      }
+      setShouldRun(true);
+
+      let needsLoading = false;
+      return curScriptBlocks.map((curBlock) => {
+        if (curBlock.dirty) {
+          needsLoading = true;
+        }
+
+        return {
+          ...curBlock,
+          loading: curBlock.loading || needsLoading,
+        };
+      });
+    });
+  };
 
   return {
     scriptBlocks,
     addBlock,
     deleteBlock,
     updateBlock,
+    requestRun,
   };
 };

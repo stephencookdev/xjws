@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useRef, useState, useEffect } from "react";
 import MonacoEditor from "react-monaco-editor";
 
 let _globalDisposable = null;
@@ -8,8 +8,40 @@ const ScriptBlock = ({
   scriptAutoCompleteSuggestions,
   updateScript,
   deleteScript,
+  requestRun,
+  tabToNextBlock,
+  tabToPreviousBlock,
 }) => {
+  const mountActions = useRef({
+    requestRun,
+    tabToNextBlock,
+    tabToPreviousBlock,
+  });
+  const editorRef = useRef(null);
   const [monaco, setMonaco] = useState(null);
+
+  useEffect(() => {
+    mountActions.current = {
+      requestRun,
+      tabToNextBlock,
+      tabToPreviousBlock,
+    };
+  }, [requestRun, tabToNextBlock, tabToPreviousBlock]);
+
+  useEffect(() => {
+    // listen for a global "focus request" event for this script id
+    // and focus monaco if it is fired
+    const listener = (event) => {
+      if (event.detail === script.id && editorRef.current) {
+        editorRef.current.focus();
+      }
+    };
+
+    document.addEventListener("focus-request", listener);
+    return () => {
+      document.removeEventListener("focus-request", listener);
+    };
+  }, [script.id, monaco]);
 
   useEffect(() => {
     if (!monaco || _globalDisposable) return;
@@ -44,47 +76,98 @@ const ScriptBlock = ({
         border: `1px solid ${script.error ? "red" : "black"}`,
         opacity: script.loading ? 0.5 : 1,
       }}
+      className="foo"
+      data-script-block
     >
-      <div style={{ border: "1px dashed black" }}>$x{script.id}</div>
-      {script.loading ? <div>Loading...</div> : null}
-      <MonacoEditor
-        language="javascript"
-        theme="vs-dark"
-        height={200}
-        width="50%"
-        value={script.content}
-        onChange={(content) => {
-          updateScript({ content });
-        }}
-        editorDidMount={(node, newMonaco) => {
-          if (newMonaco && newMonaco !== monaco) {
-            setMonaco(newMonaco);
-          }
-          if (script.autoFocus && node) {
-            node.focus();
-            const model = node.getModel();
-            const lineCount = model.getLineCount();
-            const lastLineLength = model.getLineLength(lineCount);
+      <style type="text/css">{`.foo:focus-within { background: #eaa; }`}</style>
+      <div style={{ border: "1px dashed black", display: "flex" }}>
+        $x{script.id}
+        <button style={{ marginLeft: "auto" }} onClick={deleteScript}>
+          Delete
+        </button>
+      </div>
+      <div style={{ display: "flex" }}>
+        <MonacoEditor
+          language="javascript"
+          theme="vs-dark"
+          height={200}
+          width="50%"
+          value={script.content}
+          onChange={(content) => {
+            updateScript({ content });
+          }}
+          editorDidMount={(editor, newMonaco) => {
+            editorRef.current = editor;
 
-            node.setPosition({
-              lineNumber: lineCount,
-              column: lastLineLength + 1,
+            editor.addAction({
+              id: "cmd-enter",
+              label: "Run code",
+              keybindings: [newMonaco.KeyMod.CtrlCmd | newMonaco.KeyCode.Enter],
+              contextMenuGroupId: "navigation",
+              contextMenuOrder: 1.5,
+              run: () => mountActions.current.requestRun(),
+            });
+            editor.addAction({
+              id: "ctrl+tab",
+              label: "Next code block",
+              keybindings: [newMonaco.KeyMod.WinCtrl | newMonaco.KeyCode.Tab],
+              contextMenuGroupId: "navigation",
+              contextMenuOrder: 1.5,
+              run: () => mountActions.current.tabToNextBlock(),
+            });
+            editor.addAction({
+              id: "ctrl+shift+tab",
+              label: "Previous code block",
+              keybindings: [
+                newMonaco.KeyMod.WinCtrl |
+                  newMonaco.KeyMod.Shift |
+                  newMonaco.KeyCode.Tab,
+              ],
+              contextMenuGroupId: "navigation",
+              contextMenuOrder: 1.5,
+              run: () => mountActions.current.tabToPreviousBlock(),
             });
 
-            updateScript({ autoFocus: false });
-          }
-        }}
-      />
-      {script.error ? (
-        <div style={{ border: "1px dashed red" }}>
-          {script.error.toString()}
+            if (newMonaco && newMonaco !== monaco) {
+              setMonaco(newMonaco);
+            }
+            if (script.autoFocus) {
+              editor.focus();
+              const model = editor.getModel();
+              const lineCount = model.getLineCount();
+              const lastLineLength = model.getLineLength(lineCount);
+
+              editor.setPosition({
+                lineNumber: lineCount,
+                column: lastLineLength + 1,
+              });
+
+              updateScript({ autoFocus: false });
+            }
+          }}
+          options={{
+            scrollBeyondLastLine: false,
+            scrollBeyondLastColumn: 0,
+            scrollbar: {
+              alwaysConsumeMouseWheel: false,
+            },
+          }}
+        />
+        <div>
+          {script.loading ? <div>Loading...</div> : null}
+          {script.dirty ? (
+            "..."
+          ) : script.error ? (
+            <div style={{ border: "1px dashed red" }}>
+              {script.error.toString()}
+            </div>
+          ) : (
+            <div style={{ border: "1px dashed black" }}>
+              {JSON.stringify(script.result)}
+            </div>
+          )}
         </div>
-      ) : (
-        <div style={{ border: "1px dashed black" }}>
-          {JSON.stringify(script.result)}
-        </div>
-      )}
-      <button onClick={deleteScript}>Delete</button>
+      </div>
     </div>
   );
 };
