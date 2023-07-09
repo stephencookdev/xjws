@@ -1,5 +1,6 @@
 import React, { useRef, useState, useEffect } from "react";
 import MonacoEditor from "react-monaco-editor";
+import OutputRenderer from "./OutputRenderer";
 
 let _globalDisposable = null;
 
@@ -162,9 +163,7 @@ const ScriptBlock = ({
               {script.error.toString()}
             </div>
           ) : (
-            <div style={{ border: "1px dashed black" }}>
-              {JSON.stringify(script.result)}
-            </div>
+            <OutputRenderer result={script.result} />
           )}
         </div>
       </div>

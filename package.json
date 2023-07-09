@@ -21,7 +21,9 @@
     "p-limit": "3.1",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
-    "react-monaco-editor": "^0.53.0"
+    "react-json-view": "^1.21.3",
+    "react-monaco-editor": "^0.53.0",
+    "react-use-clipboard": "^1.0.9"
   },
   "devDependencies": {
     "@babel/core": "^7.22.5",
