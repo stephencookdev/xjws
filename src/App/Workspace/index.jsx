@@ -2,7 +2,6 @@ import React, { useRef, useEffect } from "react";
 import ScriptBlock from "./ScriptBlock";
 import { useScriptBlocks } from "../scriptBlocks";
 import { useBlockAutoCompleteSuggestions } from "../extensions";
-import { add } from "lodash";
 
 const Workspace = ({ tabName }) => {
   const scriptContainer = useRef(null);
