@@ -5,7 +5,7 @@ require("electron-reload")(__dirname, {
 });
 
 const path = require("path");
-const { app, BrowserWindow } = require("electron");
+const { app, BrowserWindow, Menu } = require("electron");
 
 function createWindow() {
   let win = new BrowserWindow({
@@ -21,4 +21,29 @@ function createWindow() {
   win.loadFile("./index.html");
 }
 
-app.whenReady().then(createWindow);
+function createMenu() {
+  const template = [
+    {
+      label: "View",
+      submenu: [
+        { role: "reload" },
+        { role: "forcereload" },
+        { role: "toggledevtools" },
+        { type: "separator" },
+        { role: "resetzoom" },
+        { role: "zoomin" },
+        { role: "zoomout" },
+        { type: "separator" },
+        { role: "togglefullscreen" },
+      ],
+    },
+  ];
+
+  const menu = Menu.buildFromTemplate(template);
+  Menu.setApplicationMenu(menu);
+}
+
+app.whenReady().then(() => {
+  createWindow();
+  createMenu();
+});

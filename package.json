@@ -12,7 +12,7 @@
   "author": "Stephen Cook <stephen@stephencookdev.co.uk>",
   "license": "MIT",
   "dependencies": {
-    "electron": "^25.1.0",
+    "electron": "^31.1.0",
     "human-readable-ids": "^1.0.4",
     "lodash.debounce": "^4.0.8",
     "monaco-editor": "^0.39.0",
